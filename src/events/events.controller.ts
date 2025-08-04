@@ -1,4 +1,6 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -33,5 +35,28 @@ export class EventsController {
   @Post('category')
   createCategory(@Body('nome') nome: string) {
     return this.eventsService.createCategory(nome);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/subscribe')
+  subscribe(@Param('id') id: string, @Req() req: RequestWithUser) {
+    const userId = req.user.userId;
+    return this.eventsService.subscribe(+id, userId);
+  }
+
+  @Post('upload')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads',
+      filename: (req, file, cb) => {
+        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+        return cb(null, `${randomName}${(file.originalname)}`);
+      },
+    }),
+  }))
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
+    console.log(file);
+    return { imageUrl: `http://localhost:3000/uploads/${file.filename}` };
   }
 }

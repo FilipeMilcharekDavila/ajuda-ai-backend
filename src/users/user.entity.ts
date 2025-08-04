@@ -3,7 +3,9 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  OneToMany
 } from 'typeorm';
+import { Inscricao } from '../events/entities/inscricao.entity';
 
 export enum UserType {
   VOLUNTARIO = 'voluntario',
@@ -14,6 +16,9 @@ export enum UserType {
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @OneToMany(() => Inscricao, inscricao => inscricao.usuario)
+  inscricoes: Inscricao[];
 
   @Column()
   nome: string;

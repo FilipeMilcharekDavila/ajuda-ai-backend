@@ -1,11 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany } from 'typeorm';
 import { User } from '../../users/user.entity';
 import { Category } from './category.entity';
+import { Inscricao } from './inscricao.entity';
 
 @Entity('eventos')
 export class Event {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @OneToMany(() => Inscricao, inscricao => inscricao.evento)
+  inscricoes: Inscricao[];
 
   @Column()
   titulo: string;

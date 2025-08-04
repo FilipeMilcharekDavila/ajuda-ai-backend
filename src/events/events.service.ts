@@ -5,7 +5,8 @@ import { Event } from './entities/event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { User } from '../users/user.entity';
 import { Category } from './entities/category.entity';
-import { UsersService } from '../users/users.service'; // <-- LINHA ADICIONADA
+import { UsersService } from '../users/users.service';
+import { Inscricao } from './entities/inscricao.entity';
 
 @Injectable()
 export class EventsService {
@@ -14,7 +15,9 @@ export class EventsService {
     private eventsRepository: Repository<Event>,
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
-    private readonly usersService: UsersService, // <-- LINHA ADICIONADA
+    private readonly usersService: UsersService,
+    @InjectRepository(Inscricao)
+    private inscricaoRepository: Repository<Inscricao>,
   ) {}
 
   // LÓGICA DO MÉTODO 'create' CORRIGIDA
@@ -57,5 +60,30 @@ export class EventsService {
   async createCategory(nome: string): Promise<Category> {
       const newCategory = this.categoryRepository.create({ nome });
       return this.categoryRepository.save(newCategory);
+  }
+
+  async subscribe(eventId: number, userId: number): Promise<{ message: string }> {
+    const evento = await this.eventsRepository.findOneBy({ id: eventId });
+    if (!evento) {
+      throw new NotFoundException('Evento não encontrado');
+    }
+
+    const usuario = await this.usersService.findOneById(userId);
+    if (!usuario) {
+      throw new NotFoundException('Utilizador não encontrado');
+    }
+
+    const existingSubscription = await this.inscricaoRepository.findOne({
+      where: { evento: { id: eventId }, usuario: { id: userId } },
+    });
+
+    if (existingSubscription) {
+      throw new BadRequestException('Você já está inscrito neste evento.');
+    }
+
+    const novaInscricao = this.inscricaoRepository.create({ evento, usuario });
+    await this.inscricaoRepository.save(novaInscricao);
+
+    return { message: 'Inscrição realizada com sucesso!' };
   }
 }
