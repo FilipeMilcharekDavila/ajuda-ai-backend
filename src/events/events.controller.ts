@@ -6,6 +6,7 @@ import { Request } from 'express';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserType } from '../users/user.entity';
+import { RequestWithUser } from '../types/request-with-user.interface';
 
 @Controller('events')
 export class EventsController {
@@ -14,8 +15,8 @@ export class EventsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserType.ORGANIZADOR)
   @Post()
-  create(@Body() createEventDto: CreateEventDto, @Req() req: Request) {
-    const user = req.user; 
+  create(@Body() createEventDto: CreateEventDto, @Req() req: RequestWithUser) {
+    const user = req.user;
     return this.eventsService.create(createEventDto, user as any);
   }
 
