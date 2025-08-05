@@ -1,10 +1,5 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  OneToMany
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
+import { Aviso } from '../events/entities/aviso.entity';
 import { Inscricao } from '../events/entities/inscricao.entity';
 
 export enum UserType {
@@ -16,9 +11,6 @@ export enum UserType {
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
-
-  @OneToMany(() => Inscricao, inscricao => inscricao.usuario)
-  inscricoes: Inscricao[];
 
   @Column()
   nome: string;
@@ -38,4 +30,10 @@ export class User {
 
   @CreateDateColumn()
   data_criacao: Date;
+
+  @OneToMany(() => Inscricao, inscricao => inscricao.usuario)
+  inscricoes: Inscricao[];
+
+  @OneToMany(() => Aviso, aviso => aviso.autor)
+  avisos: Aviso[];
 }

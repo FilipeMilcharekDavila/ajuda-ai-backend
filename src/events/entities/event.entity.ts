@@ -2,14 +2,12 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, On
 import { User } from '../../users/user.entity';
 import { Category } from './category.entity';
 import { Inscricao } from './inscricao.entity';
+import { Aviso } from './aviso.entity';
 
 @Entity('eventos')
 export class Event {
   @PrimaryGeneratedColumn()
   id: number;
-
-  @OneToMany(() => Inscricao, inscricao => inscricao.evento)
-  inscricoes: Inscricao[];
 
   @Column()
   titulo: string;
@@ -34,4 +32,10 @@ export class Event {
 
   @ManyToOne(() => Category, { eager: true })
   categoria: Category;
+
+  @OneToMany(() => Inscricao, inscricao => inscricao.evento)
+  inscricoes: Inscricao[];
+
+  @OneToMany(() => Aviso, aviso => aviso.evento, { eager: true, cascade: true })
+  avisos: Aviso[];
 }

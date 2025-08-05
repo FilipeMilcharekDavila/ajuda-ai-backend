@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from './entities/event.entity';
@@ -7,38 +7,34 @@ import { User } from '../users/user.entity';
 import { Category } from './entities/category.entity';
 import { UsersService } from '../users/users.service';
 import { Inscricao } from './entities/inscricao.entity';
+import { Aviso } from './entities/aviso.entity';
+import { CreateAvisoDto } from './dto/create-aviso.dto';
 
 @Injectable()
 export class EventsService {
   constructor(
-    @InjectRepository(Event)
-    private eventsRepository: Repository<Event>,
-    @InjectRepository(Category)
-    private categoryRepository: Repository<Category>,
+    @InjectRepository(Event) private eventsRepository: Repository<Event>,
+    @InjectRepository(Category) private categoryRepository: Repository<Category>,
+    @InjectRepository(Inscricao) private inscricaoRepository: Repository<Inscricao>,
+    @InjectRepository(Aviso) private avisoRepository: Repository<Aviso>,
     private readonly usersService: UsersService,
-    @InjectRepository(Inscricao)
-    private inscricaoRepository: Repository<Inscricao>,
   ) {}
 
-  // LÓGICA DO MÉTODO 'create' CORRIGIDA
   async create(createEventDto: CreateEventDto, requestingUser: { userId: number }): Promise<Event> {
-    // 1. Obter o objeto completo do utilizador a partir do banco de dados
     const organizador = await this.usersService.findOneById(requestingUser.userId);
     if (!organizador) {
       throw new NotFoundException('Utilizador organizador não encontrado.');
     }
 
-    // 2. Obter a categoria
     const { categoriaId, ...eventData } = createEventDto;
     const categoria = await this.categoryRepository.findOne({ where: { id: categoriaId } });
     if (!categoria) {
       throw new BadRequestException(`Categoria com ID #${categoriaId} não encontrada.`);
     }
 
-    // 3. Criar o evento com as entidades completas
     const event = this.eventsRepository.create({
       ...eventData,
-      organizador: organizador, // Usar o objeto completo do organizador
+      organizador: organizador,
       categoria: categoria,
       data_evento: new Date(createEventDto.data_evento),
     });
@@ -85,5 +81,53 @@ export class EventsService {
     await this.inscricaoRepository.save(novaInscricao);
 
     return { message: 'Inscrição realizada com sucesso!' };
+  }
+
+  async createAviso(eventId: number, createAvisoDto: CreateAvisoDto, user: { userId: number }): Promise<Aviso> {
+    const evento = await this.eventsRepository.findOne({ where: { id: eventId }, relations: ['organizador'] });
+    if (!evento) {
+      throw new NotFoundException('Evento não encontrado');
+    }
+
+    if (evento.organizador.id !== user.userId) {
+        throw new ForbiddenException('Apenas o organizador do evento pode postar avisos.');
+    }
+
+    const autor = await this.usersService.findOneById(user.userId);
+    if (!autor) {
+      throw new NotFoundException('Autor não encontrado');
+    }
+
+    const novoAviso = this.avisoRepository.create({
+      mensagem: createAvisoDto.mensagem,
+      evento: evento,
+      autor: autor,
+    });
+    return this.avisoRepository.save(novoAviso);
+  }
+
+  async findAvisosByEventId(eventId: number): Promise<Aviso[]> {
+    return this.avisoRepository.find({
+      where: { evento: { id: eventId } },
+      order: { data_criacao: 'DESC' },
+    });
+  }
+
+  async deleteAviso(avisoId: number, user: { userId: number }): Promise<{ message: string }> {
+    const aviso = await this.avisoRepository.findOne({
+      where: { id: avisoId },
+      relations: ['evento', 'evento.organizador'],
+    });
+
+    if (!aviso) {
+      throw new NotFoundException('Aviso não encontrado.');
+    }
+
+    if (aviso.evento.organizador.id !== user.userId) {
+      throw new ForbiddenException('Apenas o organizador do evento pode excluir avisos.');
+    }
+
+    await this.avisoRepository.remove(aviso);
+    return { message: 'Aviso excluído com sucesso!' };
   }
 }

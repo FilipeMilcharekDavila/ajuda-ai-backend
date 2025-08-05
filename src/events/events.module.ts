@@ -7,10 +7,11 @@ import { Category } from './entities/category.entity';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { Inscricao } from './entities/inscricao.entity';
+import { Aviso } from './entities/aviso.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Event, Category, Inscricao]),
+    TypeOrmModule.forFeature([Event, Category, Inscricao, Aviso]),
     AuthModule,
     UsersModule,
   ],
