@@ -9,6 +9,7 @@ import { UsersService } from '../users/users.service';
 import { Inscricao } from './entities/inscricao.entity';
 import { Aviso } from './entities/aviso.entity';
 import { CreateAvisoDto } from './dto/create-aviso.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
 
 @Injectable()
 export class EventsService {
@@ -51,6 +52,39 @@ export class EventsService {
       throw new NotFoundException(`Evento com ID #${id} não encontrado`);
     }
     return event;
+  }
+
+  async update(id: number, updateEventDto: UpdateEventDto, user: { userId: number }): Promise<Event> {
+    const event = await this.eventsRepository.findOne({ where: { id }, relations: ['organizador'] });
+    if (!event) {
+      throw new NotFoundException(`Evento com ID #${id} não encontrado.`);
+    }
+    if (event.organizador.id !== user.userId) {
+      throw new ForbiddenException('Apenas o organizador pode editar este evento.');
+    }
+
+    if (updateEventDto.categoriaId) {
+        const categoria = await this.categoryRepository.findOneBy({ id: updateEventDto.categoriaId });
+        if (!categoria) throw new BadRequestException(`Categoria com ID #${updateEventDto.categoriaId} não encontrada.`);
+        event.categoria = categoria;
+    }
+
+    const { categoriaId, ...eventData } = updateEventDto;
+    Object.assign(event, eventData);
+
+    return this.eventsRepository.save(event);
+  }
+
+  async remove(id: number, user: { userId: number }): Promise<{ message: string }> {
+    const event = await this.eventsRepository.findOne({ where: { id }, relations: ['organizador'] });
+    if (!event) {
+      throw new NotFoundException(`Evento com ID #${id} não encontrado.`);
+    }
+    if (event.organizador.id !== user.userId) {
+      throw new ForbiddenException('Apenas o organizador pode excluir este evento.');
+    }
+    await this.eventsRepository.remove(event);
+    return { message: 'Evento excluído com sucesso!' };
   }
 
   async createCategory(nome: string): Promise<Category> {
